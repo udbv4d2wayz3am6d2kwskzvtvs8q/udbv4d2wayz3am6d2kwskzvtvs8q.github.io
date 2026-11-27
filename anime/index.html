@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex, nofollow">
+  <title>AniLiberty — тест Alphy TV</title>
+  <style>
+    * { box-sizing: border-box }
+    body { margin: 0; background: #080808; color: #f4f4f4; font: 16px/1.45 Arial, sans-serif }
+    main { width: 100%; max-width: 1112px; margin: auto; padding: 30px 24px 48px }
+    a { color: inherit }
+    header a { color: #ff0; text-decoration: none; font-size: 22px; font-weight: bold }
+    h1 { margin: 18px 0 2px; font-size: 36px; letter-spacing: -.035em }
+    header p { margin: 0 0 24px; color: #b8b8b8 }
+    .layout { display: flex; align-items: flex-start; margin: 0 -11px }
+    .layout > * { margin: 0 11px; min-width: 0 }
+    .settings { width: 252px; flex: 0 0 auto }
+    .playback { flex: 1 }
+    label { display: block; color: #ccc; font-size: 14px; margin-top: 11px }
+    label:first-child { margin-top: 0 }
+    select, button, .compare { color: #f5f5f5; background: #171717; border: 1px solid #383838; border-radius: 8px; font: inherit; min-height: 43px; padding: 8px 12px }
+    select { display: block; width: 100%; margin-top: 4px }
+    select:disabled, button:disabled { opacity: .48 }
+    button { cursor: pointer }
+    button:focus, select:focus, a:focus, summary:focus { outline: 2px solid #ff0; outline-offset: 2px }
+    .start { display: block; width: 100%; color: #0b0b0b; background: #ff0; border-color: #ff0; font-weight: bold; margin-top: 15px }
+    .start:disabled { cursor: default }
+    .compare { display: block; margin-top: 8px; text-align: center; text-decoration: none; padding: 9px 8px; color: #ddd }
+    .frame { position: relative; height: 0; padding-top: 56.25%; background: #000; border-radius: 8px; overflow: hidden; outline: 1px solid #272727 }
+    video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block }
+    .tools { display: flex; flex-wrap: wrap; margin: 8px -4px 0 }
+    .tools button { margin: 4px; font-size: 14px }
+    #status { margin: 8px 0 14px; color: #ccc; min-height: 24px }
+    #status[data-state="ok"] { color: #d4f475 }
+    #status[data-state="error"] { color: #ffaf9d }
+    .mix { padding: 14px 0; border-top: 1px solid #292929 }
+    .mix h2 { margin: 0 0 8px; font-size: 20px }
+    .mix .tools { margin-top: 4px }
+    .mix label { margin: 4px 0 6px }
+    .mix select { max-width: 340px }
+    .nudge { display: flex; align-items: center; margin-top: 5px }
+    .nudge > * { margin-right: 6px }
+    .nudge input { width: 89px; min-height: 43px; padding: 5px; border-radius: 8px; border: 1px solid #383838; background: #161616; color: #fff; font: inherit }
+    .nudge input:focus { outline: 2px solid #ff0 }
+    #audio-status { margin: 8px 0 0; color: #ccc; min-height: 23px; font-size: 14px }
+    #audio-status[data-state="ok"] { color: #d4f475 }
+    #audio-status[data-state="error"] { color: #ffaf9d }
+    details { border-top: 1px solid #292929; padding-top: 12px }
+    summary { cursor: pointer; width: fit-content }
+    #report { display: block; margin: 10px 0 6px; width: 100%; min-height: 160px; border: 1px solid #333; background: #101010; color: #dadada; border-radius: 8px; padding: 10px; font: 12px/1.5 monospace; resize: vertical }
+    #copy-note { color: #ccc; font-size: 13px; margin-left: 8px }
+    @media (max-width: 680px) {
+      main { padding: 21px 14px 36px }
+      h1 { font-size: 30px }
+      header p { margin-bottom: 16px }
+      .layout { display: block; margin: 0 }
+      .layout > * { margin: 0 }
+      .settings { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px 9px; margin-bottom: 19px }
+      label, label:first-child, .start, .compare { margin-top: 0 }
+      #status { font-size: 14px }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <a href="/">alphy TV</a>
+      <h1>AniLiberty</h1>
+      <p>Видео AniLiberty и озвучка Lift</p>
+    </header>
+    <div class="layout">
+      <section class="settings" aria-label="Настройки воспроизведения">
+        <label>Тайтл<select id="title"></select></label>
+        <label>Серия<select id="episode" disabled></select></label>
+        <label>Качество<select id="quality" disabled></select></label>
+        <label>Плеер<select id="engine">
+          <option value="auto">Авто</option>
+          <option value="native">Нативный HLS</option>
+          <option value="mse">hls.js</option>
+        </select></label>
+        <button class="start" id="play" disabled>Смотреть</button>
+        <a id="compare" class="compare" href="/k/5230828" target="_blank" rel="noopener">Тайтл на Alphy</a>
+      </section>
+      <section class="playback" aria-label="Видео">
+        <div class="frame"><video id="video" controls playsinline preload="none" aria-label="Видеоплеер"></video></div>
+        <div class="tools">
+          <button id="seek" disabled>+30 секунд</button>
+          <button id="next" disabled>Следующая серия</button>
+          <button id="probe" disabled>Проверить CDN</button>
+        </div>
+        <p id="status" role="status">Загружаем список серий…</p>
+        <section class="mix" aria-label="Сведение озвучки">
+          <h2>Озвучка Lift</h2>
+          <button id="load-audio" disabled>Загрузить дорожки</button>
+          <label>Дорожка Lift<select id="lift-track" disabled></select></label>
+          <div class="tools">
+            <button id="auto-sync" disabled>Автосведение</button>
+            <button id="manual-sync" disabled>Ручное сведение</button>
+            <button id="source-audio" disabled>Звук AniLiberty</button>
+          </div>
+          <label for="audio-offset">Сдвиг Lift в секундах. Плюс продвигает звук вперёд</label>
+          <div class="nudge">
+            <button id="offset-back" disabled aria-label="Задержать звук на 0,1 секунды">−0,1</button>
+            <input id="audio-offset" type="number" inputmode="decimal" min="-90" max="90" step="0.05" value="0" disabled>
+            <button id="offset-forward" disabled aria-label="Продвинуть звук на 0,1 секунды">+0,1</button>
+          </div>
+          <p id="audio-status" role="status"></p>
+        </section>
+        <details id="diagnostics">
+          <summary>Диагностика</summary>
+          <textarea id="report" aria-label="Отчёт проверки" readonly spellcheck="false"></textarea>
+          <button id="copy" type="button">Скопировать отчёт</button><span id="copy-note" role="status"></span>
+        </details>
+      </section>
+    </div>
+  </main>
+  <script src="/anime/catalog.js?v=2"></script>
+  <script src="/anime/mixer.js?v=2"></script>
+  <script>
+    (function () {
+      'use strict';
+      var version = '2.0';
+      var titles = window.animeLabTitles;
+      var apiHosts = ['anilibria.top', 'api.anilibria.app'];
+      var hlsSrc = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js';
+      var byId = function (id) { return document.getElementById(id); };
+      var title = byId('title'), episodes = byId('episode'), quality = byId('quality'), engine = byId('engine');
+      var video = byId('video'), play = byId('play'), next = byId('next'), seek = byId('seek'), probe = byId('probe');
+      var report = byId('report'), status = byId('status'), compare = byId('compare');
+      var releaseCache = {};
+      var selectionId = 0;
+      var player = null;
+      var scriptTask = null;
+      var active = null;
+      var episodeRows = [];
+      var canRetryTitle = false;
+      var wantedQuality = '720';
+      var log = [];
+      var started = performance.now();
+      var activeAudioKey = '';
+      var mixer = window.mountAnimeMixer({ video: video, current: audioContextForRow, log: add, direct: directMedia });
+      Object.keys(titles).forEach(function (key) { title.add(new Option(titles[key].title, key)); });
+      var tv = /Tizen|SMART-TV|SmartTV|Web0S|WebOS/i.test(navigator.userAgent);
+      var safari = /iPhone|iPad|iPod|Version\/.*Safari/i.test(navigator.userAgent)
+        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+      function elapsed(from) { return Math.round(performance.now() - from); }
+      function setStatus(text, state) {
+        status.textContent = text;
+        status.setAttribute('data-state', state || '');
+      }
+      function add(details) {
+        log.push('+' + elapsed(started) + ' мс  ' + details);
+        if (log.length > 110) log.shift();
+        report.value = 'Alphy / AniLiberty ' + version + '\n' + new Date().toISOString()
+          + '\n' + navigator.userAgent + '\n\n' + log.join('\n');
+        if (document.activeElement !== report) report.scrollTop = report.scrollHeight;
+      }
+      function hostname(value) {
+        if (!value) return '';
+        var a = document.createElement('a');
+        a.href = value;
+        return a.hostname;
+      }
+      function cleanUrl(candidate) {
+        if (typeof candidate !== 'string' || !/^https:\/\//i.test(candidate)) return '';
+        return candidate;
+      }
+      function errorResult(text, code) {
+        var error = new Error(text);
+        error.httpStatus = code || 0;
+        return error;
+      }
+      function noteError(error) {
+        return error && (error.httpStatus ? 'HTTP ' + error.httpStatus : error.message) || 'Ошибка сети';
+      }
+      function timedFetch(url, options, timeout, read) {
+        var c = typeof AbortController === 'function' ? new AbortController() : null;
+        if (c) options.signal = c.signal;
+        return new Promise(function (resolve, reject) {
+          var timer = setTimeout(function () {
+            if (c) c.abort();
+            reject(errorResult('Тайм-аут ' + timeout + ' мс'));
+          }, timeout);
+          fetch(url, options).then(read).then(function (value) {
+            clearTimeout(timer);
+            resolve(value);
+          }, function (error) {
+            clearTimeout(timer);
+            reject(error);
+          });
+        });
+      }
+      function responseData(response, read, from) {
+        var details = { status: response.status, ms: elapsed(from), host: hostname(response.url), url: response.url };
+        if (!response.ok) return details;
+        return read(response).then(function (data) { details.data = data; return details; });
+      }
+      function requestRelease(id, force) {
+        var cached = releaseCache[id];
+        if (!force && cached && Date.now() - cached.at < 120000) return cached.task;
+        function tryHost(index) {
+          var host = apiHosts[index], t = performance.now();
+          return timedFetch('https://' + host + '/api/v1/anime/releases/' + id,
+            { credentials: 'omit', referrerPolicy: 'no-referrer', cache: force ? 'no-cache' : 'default' }, 4200,
+            function (r) { return responseData(r, function (value) { return value.json(); }, t); }
+          ).then(function (r) {
+            add('API · ' + host + ' · релиз ' + id + ' · HTTP ' + r.status + ' · ' + r.ms + ' мс');
+            if (!r.data || !Array.isArray(r.data.episodes)) throw errorResult('Релиз недоступен', r.status);
+            return r.data;
+          }, function (error) {
+            add('API · ' + host + ' · релиз ' + id + ' · ' + noteError(error) + ' · ' + elapsed(t) + ' мс');
+            throw error;
+          }).catch(function (error) {
+            if (index + 1 < apiHosts.length && error.httpStatus !== 404) return tryHost(index + 1);
+            throw error;
+          });
+        }
+        var task = tryHost(0).catch(function (error) {
+          if (releaseCache[id] && releaseCache[id].task === task) delete releaseCache[id];
+          throw error;
+        });
+        releaseCache[id] = { task: task, at: Date.now() };
+        return task;
+      }
+      function row() { return episodeRows[Number(episodes.value)] || null; }
+      function selectedUrl() { return row() ? cleanUrl(row().episode['hls_' + quality.value]) : ''; }
+      function audioContextForRow() {
+        var item = row();
+        if (!item || !titles[title.value]) return null;
+        return {
+          lift: titles[title.value].lift, season: item.season, number: item.episode.ordinal,
+          duration: item.episode.duration, analysisUrl: cleanUrl(item.episode.hls_480) || selectedUrl()
+        };
+      }
+      function directMedia(url, method) {
+        return timedFetch(url, { credentials: 'omit', referrerPolicy: 'no-referrer' }, 8500, function (r) {
+          if (!r.ok) throw errorResult('AniLiberty HTTP ' + r.status, r.status);
+          return r[method]();
+        });
+      }
+      function availability() {
+        var url = selectedUrl();
+        play.disabled = !canRetryTitle && (episodes.disabled || !url);
+        probe.disabled = !url || probe.hasAttribute('data-pending');
+        next.disabled = episodes.disabled || Number(episodes.value) + 1 >= episodeRows.length;
+      }
+      function episodeLabel(item) {
+        if (item.season === 0) return 'Фильм';
+        return 'S' + item.season + 'E' + item.episode.ordinal + (item.episode.name ? ' · ' + item.episode.name : '');
+      }
+      function syncChoices() {
+        var item = row();
+        quality.textContent = '';
+        [1080, 720, 480].forEach(function (height) {
+          if (item && cleanUrl(item.episode['hls_' + height])) quality.add(new Option(height + 'p', String(height)));
+        });
+        if (Array.prototype.some.call(quality.options, function (o) { return o.value === wantedQuality; })) quality.value = wantedQuality;
+        quality.disabled = !quality.options.length;
+        availability();
+        if (item) compare.href = '/k/' + titles[title.value].kp + (item.season ? '/s' + item.season + 'e' + item.episode.ordinal : '');
+        var audioKey = item ? title.value + '/' + item.season + '/' + item.episode.ordinal : '';
+        if (audioKey !== activeAudioKey) { activeAudioKey = audioKey; mixer.reset(); }
+      }
+      function clearPlayer() {
+        mixer.reset(false);
+        if (active) {
+          clearTimeout(active.timer);
+          if (active.frameId != null && video.cancelVideoFrameCallback) video.cancelVideoFrameCallback(active.frameId);
+        }
+        active = null;
+        if (player) { player.destroy(); player = null; }
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+        seek.disabled = true;
+      }
+      function loadTitle(force) {
+        var ticket = ++selectionId;
+        var item = titles[title.value];
+        canRetryTitle = false;
+        play.textContent = 'Смотреть';
+        var sequence = item.releases.map(function (id, index) {
+          return requestRelease(id, force).then(function (data) { return { season: item.movie ? 0 : index + 1, data: data }; }, function (error) { return { error: error }; });
+        });
+        clearPlayer();
+        episodes.disabled = quality.disabled = true;
+        episodes.textContent = '';
+        quality.textContent = '';
+        episodeRows = [];
+        activeAudioKey = '';
+        mixer.reset();
+        compare.href = '/k/' + item.kp;
+        availability();
+        setStatus('Загружаем список серий…');
+        return Promise.all(sequence).then(function (results) {
+          if (ticket !== selectionId) return;
+          results.forEach(function (result) {
+            if (!result.data || result.data.is_blocked_by_geo || result.data.is_blocked_by_copyrights) return;
+            result.data.episodes.slice().sort(function (a, b) { return a.ordinal - b.ordinal; }).forEach(function (episode) {
+              if (cleanUrl(episode.hls_480) || cleanUrl(episode.hls_720) || cleanUrl(episode.hls_1080)) {
+                var value = { season: result.season, episode: episode };
+                episodes.add(new Option(episodeLabel(value), String(episodeRows.length)));
+                episodeRows.push(value);
+              }
+            });
+          });
+          episodes.disabled = !episodeRows.length;
+          syncChoices();
+          if (episodeRows.length) {
+            play.textContent = 'Смотреть';
+            setStatus('Серий доступно в API: ' + episodeRows.length
+              + (results.some(function (result) { return result.error; }) ? '. Часть сезонов недоступна.' : ''));
+          } else {
+            play.textContent = 'Повторить загрузку';
+            canRetryTitle = true;
+            availability();
+            var notFound = results.some(function (result) { return result.error && result.error.httpStatus === 404; });
+            setStatus(notFound ? 'AniLiberty не выдаёт этот релиз для вашего подключения (HTTP 404). Можно открыть тайтл на Alphy.'
+              : 'AniLiberty не вернула доступные серии. Откройте диагностику или повторите запрос.', 'error');
+          }
+        });
+      }
+      function loadHls() {
+        if (window.Hls) return Promise.resolve(window.Hls);
+        if (scriptTask) return scriptTask;
+        scriptTask = new Promise(function (resolve, reject) {
+          var script = document.createElement('script');
+          var timer = setTimeout(function () { fail('Тайм-аут загрузки hls.js'); }, 6500);
+          function fail(text) {
+            clearTimeout(timer);
+            if (script.parentNode) script.parentNode.removeChild(script);
+            reject(errorResult(text));
+          }
+          script.src = hlsSrc;
+          script.crossOrigin = 'anonymous';
+          script.onload = function () {
+            clearTimeout(timer);
+            if (window.Hls) resolve(window.Hls);
+            else fail('hls.js не запустился');
+          };
+          script.onerror = function () { fail('Не загрузился hls.js с jsDelivr'); };
+          document.head.appendChild(script);
+        }).catch(function (error) { scriptTask = null; throw error; });
+        return scriptTask;
+      }
+      function failPlayback(attempt, text) {
+        if (active !== attempt || attempt.failed) return;
+        attempt.failed = true;
+        clearTimeout(attempt.timer);
+        add(text);
+        setStatus(text, 'error');
+        play.textContent = 'Повторить';
+        byId('diagnostics').open = true;
+      }
+      function requestPlay(attempt) {
+        var result = video.play();
+        if (result && result.catch) result.catch(function (error) {
+          if (active !== attempt || attempt.failed || error.name === 'AbortError') return;
+          add('play() · ' + error.name);
+          if (error.name === 'NotAllowedError') {
+            clearTimeout(attempt.timer);
+            setStatus('Нажмите Play на самом видео, чтобы браузер разрешил старт.');
+          } else if (!attempt.first) {
+            failPlayback(attempt, 'Видео не запустилось · ' + error.name + '.');
+          }
+        });
+      }
+      function firstFrame(attempt, via) {
+        if (active !== attempt || attempt.first || !video.videoWidth) return;
+        attempt.first = true;
+        attempt.failed = false;
+        clearTimeout(attempt.timer);
+        var ms = elapsed(attempt.started);
+        add('Первый кадр · ' + video.videoWidth + '×' + video.videoHeight + ' · ' + ms + ' мс · ' + via);
+        setStatus(attempt.label + ' · ' + video.videoHeight + 'p · ' + attempt.engine + ' · первый кадр ' + ms + ' мс', 'ok');
+        mixer.playing();
+        play.textContent = 'Смотреть';
+      }
+      function runPlayback(position) {
+        var url = selectedUrl();
+        if (!url) return;
+        clearPlayer();
+        var nativeHls = !!video.canPlayType('application/vnd.apple.mpegurl');
+        var hasMse = !!(window.MediaSource || window.ManagedMediaSource);
+        var autoNative = nativeHls && (tv || safari || !hasMse);
+        var mode = engine.value === 'auto' ? (autoNative ? 'native' : 'mse') : engine.value;
+        var attempt = active = {
+          label: episodeLabel(row()), started: performance.now(), first: false,
+          engine: mode === 'native' ? 'Нативный HLS' : 'hls.js', position: position || 0
+        };
+        add(attempt.label + ' · ' + quality.value + 'p · ' + attempt.engine + ' · ' + hostname(url));
+        setStatus('Открываем ' + attempt.label + '…');
+        attempt.timer = setTimeout(function () {
+          failPlayback(attempt, 'Первый кадр не получен за 12 секунд. Можно отдельно проверить CDN.');
+        }, 12000);
+        if (mode === 'native') {
+          if (!nativeHls) { failPlayback(attempt, 'Браузер не объявляет поддержку нативного HLS.'); return; }
+          video.src = url;
+          requestPlay(attempt);
+          return;
+        }
+        var t = performance.now();
+        loadHls().then(function (Hls) {
+          if (active !== attempt) return;
+          if (attempt.failed) return;
+          if (!Hls.isSupported()) { failPlayback(attempt, 'Браузер не поддерживает hls.js / MSE.'); return; }
+          add('hls.js ' + Hls.version + ' · готов за ' + elapsed(t) + ' мс');
+          if (!window.MediaSource && window.ManagedMediaSource) video.disableRemotePlayback = true;
+          var limit = { default: { maxTimeToFirstByteMs: 5500, maxLoadTimeMs: 9000, timeoutRetry: null, errorRetry: null } };
+          var hls = player = new Hls({
+            manifestLoadPolicy: limit, playlistLoadPolicy: limit, fragLoadPolicy: limit,
+            maxBufferLength: 24, startPosition: attempt.position || -1
+          });
+          hls.on(Hls.Events.MANIFEST_PARSED, function () {
+            if (active === attempt) add('Плейлист разобран · ' + elapsed(attempt.started) + ' мс');
+          });
+          hls.on(Hls.Events.FRAG_LOADED, function (_, data) {
+            if (active !== attempt || attempt.segment || data.frag.type !== 'main') return;
+            attempt.segment = true;
+            var host = hostname(data.networkDetails && data.networkDetails.responseURL) || hostname(data.frag.url);
+            add('Первый сегмент получен · ' + host + ' · ' + elapsed(attempt.started) + ' мс');
+          });
+          hls.on(Hls.Events.ERROR, function (_, data) {
+            if (active !== attempt) return;
+            var code = data.response && data.response.code;
+            var info = data.details + (code ? ' · HTTP ' + code : '');
+            if (!data.fatal) { if (!attempt.first) add(info); return; }
+            var label = /^frag/i.test(data.details) ? 'Сбой сегмента' : /^manifest|^level/i.test(data.details) ? 'Сбой плейлиста' : 'Сбой плеера';
+            failPlayback(attempt, label + ' · ' + info);
+          });
+          hls.on(Hls.Events.MEDIA_ATTACHED, function () {
+            if (active !== attempt) return;
+            hls.loadSource(url);
+            requestPlay(attempt);
+          });
+          hls.attachMedia(video);
+        }).catch(function (error) { failPlayback(attempt, noteError(error)); });
+      }
+      video.addEventListener('loadedmetadata', function () {
+        if (!active) return;
+        add('Метаданные видео · ' + elapsed(active.started) + ' мс · ' + Math.round(video.duration) + ' с');
+        if (active.position > 0 && active.engine === 'Нативный HLS') video.currentTime = active.position;
+        seek.disabled = !isFinite(video.duration) || video.duration <= 0;
+      });
+      video.addEventListener('loadeddata', function () {
+        var attempt = active;
+        if (!attempt) return;
+        if (video.requestVideoFrameCallback) {
+          attempt.frameId = video.requestVideoFrameCallback(function () { firstFrame(attempt, 'video frame'); });
+        } else firstFrame(attempt, 'loadeddata');
+      });
+      video.addEventListener('timeupdate', function () {
+        if (active && !active.first && video.currentTime > 0 && video.readyState >= 2) firstFrame(active, 'timeupdate');
+      });
+      video.addEventListener('playing', function () {
+        if (active && !active.playing) {
+          active.playing = true;
+          add('Воспроизведение началось · ' + elapsed(active.started) + ' мс');
+        }
+      });
+      video.addEventListener('error', function () {
+        if (active && video.error) failPlayback(active, 'Ошибка видео · MediaError ' + video.error.code);
+      });
+      video.addEventListener('seeking', function () {
+        if (!active || !active.first) return;
+        active.seeking = performance.now();
+        add('Перемотка → ' + video.currentTime.toFixed(1) + ' с');
+      });
+      video.addEventListener('seeked', function () {
+        if (!active || !active.seeking) return;
+        add('Перемотка завершилась · ' + video.currentTime.toFixed(1) + ' с · ' + elapsed(active.seeking) + ' мс');
+        active.seeking = null;
+      });
+      function stepEpisode() {
+        var target = Number(episodes.value) + 1;
+        if (!episodeRows[target]) return;
+        episodes.value = String(target);
+        syncChoices();
+        runPlayback(0);
+      }
+      function testCdn() {
+        var url = selectedUrl();
+        if (!url) return;
+        function stillSelected() { return selectedUrl() === url && (!active || active.failed); }
+        var label = episodeLabel(row()) + ' · ' + quality.value + 'p';
+        probe.setAttribute('data-pending', '');
+        availability();
+        byId('diagnostics').open = true;
+        add('Проверка CDN · ' + label);
+        var phase = 'Плейлист', t = performance.now();
+        var options = { credentials: 'omit', referrerPolicy: 'no-referrer' };
+        var firstMs;
+        timedFetch(url, options, 6500, function (r) {
+          return responseData(r, function (value) { return value.text(); }, t);
+        }).then(function (m) {
+          add(phase + ' · ' + m.host + ' · HTTP ' + m.status + ' · ' + m.ms + ' мс');
+          if (!m.data) throw errorResult('Плейлист недоступен', m.status);
+          var segment = /(?:^|\n)#EXTINF:[^\n]*\n\s*([^#\s][^\n]*)/.exec(m.data);
+          if (!segment) throw errorResult('Медиасегмент не найден');
+          firstMs = m.ms;
+          phase = 'Сегмент';
+          t = performance.now();
+          return timedFetch(new URL(segment[1].trim(), m.url || url).href,
+            { credentials: 'omit', referrerPolicy: 'no-referrer', headers: { Range: 'bytes=0-4095' } }, 6500,
+            function (r) {
+              var entry = { status: r.status, host: hostname(r.url), ms: elapsed(t), bytes: 0 };
+              if (!r.ok) return entry;
+              var length = Number(r.headers.get('content-length'));
+              if (r.status === 206 && length > 0 && length <= 4096) {
+                return r.arrayBuffer().then(function (bytes) { entry.bytes = bytes.byteLength; return entry; });
+              }
+              if (r.body && r.body.cancel) r.body.cancel().catch(function () {});
+              return entry;
+            });
+        }).then(function (segment) {
+          add(phase + ' · ' + segment.host + ' · HTTP ' + segment.status + ' · ' + segment.ms + ' мс'
+            + (segment.bytes ? ' · ' + segment.bytes + ' байт' : ''));
+          if (stillSelected()) setStatus('CDN · плейлист ' + firstMs + ' мс · сегмент HTTP ' + segment.status,
+            segment.status < 300 ? 'ok' : 'error');
+        }).catch(function (error) {
+          add(phase + ' · ' + noteError(error));
+          if (stillSelected()) setStatus('Проверка CDN · ' + phase.toLowerCase() + ' · ' + noteError(error), 'error');
+        }).then(function () {
+          probe.removeAttribute('data-pending');
+          availability();
+        });
+      }
+      title.addEventListener('change', function () { loadTitle(false); });
+      episodes.addEventListener('change', function () {
+        var switching = !!active;
+        syncChoices();
+        if (switching) runPlayback(0);
+      });
+      quality.addEventListener('change', function () {
+        wantedQuality = quality.value;
+        if (active) runPlayback(video.currentTime);
+      });
+      engine.addEventListener('change', function () { if (active) runPlayback(video.currentTime); });
+      play.addEventListener('click', function () {
+        if (!row()) { loadTitle(true); return; }
+        if (active && !active.failed && video.currentSrc) { if (video.paused) requestPlay(active); return; }
+        runPlayback(active && active.first ? video.currentTime : 0);
+      });
+      seek.addEventListener('click', function () { video.currentTime = Math.min(video.currentTime + 30, video.duration - 0.1); });
+      next.addEventListener('click', stepEpisode);
+      probe.addEventListener('click', testCdn);
+      byId('copy').addEventListener('click', function () {
+        var note = byId('copy-note');
+        function select() { report.focus(); report.select(); note.textContent = 'Текст выделен. Скопируйте его вручную.'; }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(report.value).then(function () { note.textContent = 'Скопировано'; }, select);
+        } else select();
+      });
+      add('Локальный отчёт · API и HLS напрямую · ' + location.hostname);
+      loadTitle(false);
+    }());
+  </script>
+</body>
+</html>
